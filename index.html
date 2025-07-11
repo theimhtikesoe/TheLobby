@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bartender Shift Tracker</title>
+  <style>
+    body {
+      background: #121212;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 30px;
+    }
+    h1 {
+      color: #ff3c3c;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #1e1e1e;
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #333;
+      text-align: center;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 4px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+      text-align: center;
+    }
+    .btn {
+      background-color: #ff3c3c;
+      color: white;
+      padding: 8px 16px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: block;
+      margin-left: auto;
+    }
+    .delete-btn {
+      background-color: #e63946;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .total-box {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: right;
+      color: #00ff88;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🍹 Bartender Shift Tracker</h1>
+
+<table id="shiftTable">
+  <thead>
+    <tr>
+      <th>Dates</th>
+      <th>Cash (comma)</th>
+      <th>Transfers (comma)</th>
+      <th>Expenses</th>
+      <th>Net Sale</th>
+      <th>Change</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody id="shiftBody"></tbody>
+</table>
+
+<button class="btn" onclick="addShift()">+ Add New Shift</button>
+
+<div class="total-box">
+  Grand Total Net Sale: <span id="grandTotal">0</span> ฿
+</div>
+
+<script>
+  const FLOAT_AMOUNT = 4000;
+  const STORAGE_KEY = 'bartenderShiftData';
+
+  // Load from localStorage if exists
+  let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [
+    {
+      dates: "7.7 + 8.7",
+      cash: "200",
+      transfers: "40,1040,1920,1040,570",
+      expenses: 0
+    },
+    {
+      dates: "8.7 + 9.7",
+      cash: "200,200",
+      transfers: "250,1700,240",
+      expenses: 69
+    },
+    {
+      dates: "9.7 + 10.7",
+      cash: "480",
+      transfers: "200,144",
+      expenses: 0
+    }
+  ];
+
+  const tableBody = document.getElementById('shiftBody');
+  const grandTotalEl = document.getElementById('grandTotal');
+
+  function parseSum(str) {
+    if (!str) return 0;
+    return str
+      .split(',')
+      .map(s => parseFloat(s.trim()) || 0)
+      .reduce((a, b) => a + b, 0);
+  }
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function renderTable() {
+    tableBody.innerHTML = '';
+    let grandTotal = 0;
+
+    data.forEach((shift, index) => {
+      const row = document.createElement('tr');
+
+      // Date
+      const dateCell = document.createElement('td');
+      const dateInput = document.createElement('input');
+      dateInput.type = 'text';
+      dateInput.value = shift.dates;
+      dateInput.onchange = () => updateValue(index, 'dates', dateInput.value);
+      dateCell.appendChild(dateInput);
+      row.appendChild(dateCell);
+
+      // Cash
+      const cashCell = document.createElement('td');
+      const cashInput = document.createElement('input');
+      cashInput.type = 'text';
+      cashInput.value = shift.cash;
+      cashInput.onchange = () => updateValue(index, 'cash', cashInput.value);
+      cashCell.appendChild(cashInput);
+      row.appendChild(cashCell);
+
+      // Transfers
+      const transferCell = document.createElement('td');
+      const transferInput = document.createElement('input');
+      transferInput.type = 'text';
+      transferInput.value = shift.transfers;
+      transferInput.onchange = () => updateValue(index, 'transfers', transferInput.value);
+      transferCell.appendChild(transferInput);
+      row.appendChild(transferCell);
+
+      // Expenses
+      const expenseCell = document.createElement('td');
+      const expenseInput = document.createElement('input');
+      expenseInput.type = 'number';
+      expenseInput.value = shift.expenses;
+      expenseInput.onchange = () => updateValue(index, 'expenses', parseFloat(expenseInput.value) || 0);
+      expenseCell.appendChild(expenseInput);
+      row.appendChild(expenseCell);
+
+      // Net Sale
+      const netSale = parseSum(shift.cash) + parseSum(shift.transfers) - shift.expenses;
+      grandTotal += netSale;
+      const netSaleCell = document.createElement('td');
+      netSaleCell.textContent = netSale.toLocaleString() + ' ฿';
+      row.appendChild(netSaleCell);
+
+      // Change
+      const changeCell = document.createElement('td');
+      changeCell.textContent = FLOAT_AMOUNT.toLocaleString() + ' ฿';
+      row.appendChild(changeCell);
+
+      // Delete button
+      const deleteCell = document.createElement('td');
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = "🗑️";
+      deleteBtn.className = "delete-btn";
+      deleteBtn.onclick = () => {
+        if (confirm("Delete this shift?")) {
+          data.splice(index, 1);
+          saveData();
+          renderTable();
+        }
+      };
+      deleteCell.appendChild(deleteBtn);
+      row.appendChild(deleteCell);
+
+      tableBody.appendChild(row);
+    });
+
+    grandTotalEl.textContent = grandTotal.toLocaleString();
+  }
+
+  function updateValue(index, field, value) {
+    data[index][field] = value;
+    saveData();
+    renderTable();
+  }
+
+  function addShift() {
+    data.push({
+      dates: '',
+      cash: '',
+      transfers: '',
+      expenses: 0
+    });
+    saveData();
+    renderTable();
+  }
+
+  renderTable();
+</script>
+
+</body>
+</html>
