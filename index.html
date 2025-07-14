@@ -62,17 +62,19 @@
 </head>
 <body>
 
-<h1>🍹 The Lobby Bar Tracker </h1>
+<h1>🍹 The Lobby Bar Tracker</h1>
 
 <table id="shiftTable">
   <thead>
     <tr>
       <th>Dates</th>
-      <th>Cash (comma)</th>
-      <th>Transfers (comma)</th>
+      <th>Cash</th>
+      <th>Transfers</th>
       <th>Expenses</th>
+      <th>Yesterday Change</th>
       <th>Net Sale</th>
-      <th>Change</th>
+      <th>Total Sale</th>
+      <th>Today Change</th>
       <th>Delete</th>
     </tr>
   </thead>
@@ -86,28 +88,29 @@
 </div>
 
 <script>
-  const FLOAT_AMOUNT = 4000;
-  const STORAGE_KEY = 'bartenderShiftData';
+  const STORAGE_KEY = 'bartenderShiftDataV2';
 
-  // Load from localStorage if exists
   let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [
     {
       dates: "7.7 + 8.7",
       cash: "200",
       transfers: "40,1040,1920,1040,570",
-      expenses: 0
+      expenses: 0,
+      yesterdayChange: 0
     },
     {
       dates: "8.7 + 9.7",
       cash: "200,200",
       transfers: "250,1700,240",
-      expenses: 69
+      expenses: 69,
+      yesterdayChange: 0
     },
     {
       dates: "9.7 + 10.7",
       cash: "480",
       transfers: "200,144",
-      expenses: 0
+      expenses: 0,
+      yesterdayChange: 0
     }
   ];
 
@@ -169,19 +172,41 @@
       expenseCell.appendChild(expenseInput);
       row.appendChild(expenseCell);
 
+      // Yesterday Change
+      const yestChangeCell = document.createElement('td');
+      const yestInput = document.createElement('input');
+      yestInput.type = 'number';
+      yestInput.value = shift.yesterdayChange || 0;
+      yestInput.onchange = () => updateValue(index, 'yesterdayChange', parseFloat(yestInput.value) || 0);
+      yestChangeCell.appendChild(yestInput);
+      row.appendChild(yestChangeCell);
+
+      // Calculations
+      const cashTotal = parseSum(shift.cash);
+      const transferTotal = parseSum(shift.transfers);
+      const expenses = parseFloat(shift.expenses) || 0;
+      const yesterdayChange = parseFloat(shift.yesterdayChange) || 0;
+      const netSale = cashTotal + transferTotal - expenses;
+      const totalSale = netSale + yesterdayChange;
+      const todayChange = totalSale - (cashTotal + transferTotal + expenses);
+
       // Net Sale
-      const netSale = parseSum(shift.cash) + parseSum(shift.transfers) - shift.expenses;
-      grandTotal += netSale;
       const netSaleCell = document.createElement('td');
       netSaleCell.textContent = netSale.toLocaleString() + ' ฿';
       row.appendChild(netSaleCell);
+      grandTotal += netSale;
 
-      // Change
-      const changeCell = document.createElement('td');
-      changeCell.textContent = FLOAT_AMOUNT.toLocaleString() + ' ฿';
-      row.appendChild(changeCell);
+      // Total Sale
+      const totalSaleCell = document.createElement('td');
+      totalSaleCell.textContent = totalSale.toLocaleString() + ' ฿';
+      row.appendChild(totalSaleCell);
 
-      // Delete button
+      // Today Change
+      const todayChangeCell = document.createElement('td');
+      todayChangeCell.textContent = todayChange.toLocaleString() + ' ฿';
+      row.appendChild(todayChangeCell);
+
+      // Delete
       const deleteCell = document.createElement('td');
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = "🗑️";
@@ -213,7 +238,8 @@
       dates: '',
       cash: '',
       transfers: '',
-      expenses: 0
+      expenses: 0,
+      yesterdayChange: 0
     });
     saveData();
     renderTable();
